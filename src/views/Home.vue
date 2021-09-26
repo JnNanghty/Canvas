@@ -1,6 +1,7 @@
 <template>
   <div class="home">
     <div class="top-area">
+      <div class="score">{{line}}</div>
       <div class="screen">
         <!--   20 row  10 col  23px/格   -->
         <canvas class="canvas" ref="screenCanvas" :width="width" :height="height"></canvas>
@@ -44,12 +45,12 @@ export default {
       notUseBlock: [],  // 未使用的
       gameIsEnd: false,
       currentBlock: {name: '', x: 0, y: 0, directionIndex: 0}, // direction
-      speed: 200,   // 每帧后过多少毫秒动一下
+      speed: 1000,   // 每帧后过多少毫秒动一下
       frameTimeout: null,
       contactStartTime: false,  // 碰撞开始时间
       directionArray: ['up', 'right', 'down', 'left'],
       lastImageData: false,   // 上一次发生碰撞时的游戏画面。
-      line: 0,
+      line: 0,    // 消除的行数
     }
   },
   mounted() {
@@ -116,6 +117,7 @@ export default {
       y = y || this.currentBlock.y
       // * x * *
       // x x x *
+      this.screenCtx.fillStyle = "#2fff00"
       let {directionIndex} = this.currentBlock
       if (directionIndex === 0) {
         // 如果超出了画布， 那就制止
@@ -151,6 +153,7 @@ export default {
     },
     // 棍
     drawI(x, y) {
+      this.screenCtx.fillStyle = "#00ffc2"
       x = x || this.currentBlock.x
       y = y || this.currentBlock.y
       // x x x x
@@ -182,6 +185,7 @@ export default {
     },
     // Z
     drawZ(x, y) {
+      this.screenCtx.fillStyle = "#0052ff"
       x = x || this.currentBlock.x
       y = y || this.currentBlock.y
       // x x * *
@@ -206,6 +210,7 @@ export default {
     },
     // 反Z
     drawReZ(x, y) {
+      this.screenCtx.fillStyle = "#c700ff"
       x = x || this.currentBlock.x
       y = y || this.currentBlock.y
       // * x x *
@@ -230,6 +235,7 @@ export default {
     },
     // L
     drawL(x, y) {
+      this.screenCtx.fillStyle = "#ff006a"
       x = x || this.currentBlock.x
       y = y || this.currentBlock.y
       // * * x *
@@ -268,6 +274,7 @@ export default {
     },
     // 反 L
     drawReL(x, y) {
+      this.screenCtx.fillStyle = "#ff0000"
       x = x || this.currentBlock.x
       y = y || this.currentBlock.y
       // x * * *
@@ -307,6 +314,7 @@ export default {
     },
     // 田
     drawTian(x, y) {
+      this.screenCtx.fillStyle = "#ff6a00"
       x = x || this.currentBlock.x
       y = y || this.currentBlock.y
       // x x * *
@@ -341,8 +349,7 @@ export default {
         let currentTime = new Date().getTime();
         if (self.contactStartTime && (currentTime - self.contactStartTime >= self.speed)) {
           // 消行检测
-          self.line = self.removeLine()
-          console.log(self.line)
+          self.line += self.removeLine()
           self.contactStartTime = false;
           self.lastImageData = self.screenCtx.getImageData(0, 0, self.width, self.height);
           // 发生碰撞时  最上面中间两块是否被填充
@@ -355,7 +362,7 @@ export default {
         self.collisionDetection();
       })
     },
-    // 碰撞检测  检测 currentBlock 和 底部的方块是否有碰撞
+    // 纵向碰撞检测  检测 currentBlock 和 底部的方块是否有碰撞
     // 有碰撞， 就停下，判断游戏是否结束， 若没结束 则 生成新的方块，
     collisionDetection() {
       // 游戏区域  x 10 * this.unitSize  y 20 * this.unitSize
@@ -562,6 +569,334 @@ export default {
       } else if (!contactFlag) {
         this.contactStartTime = false
       }
+      return contactFlag;
+    },
+    // 横向碰撞检测
+    // 判断左边和右边有无色块
+    rowCollisionDetection(key) {
+      let {name, directionIndex, x, y} = this.currentBlock
+      let contactFlag = false;
+      if (name === 'T') {
+        let imageData = this.screenCtx.getImageData(x - this.unitSize, y, this.unitSize * 5, this.unitSize * 3)
+        if (directionIndex === 0) {
+          //* ? x ? *
+          //? x x x ?
+          if (key === 'left') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          } else if (key === 'right') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 4 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          }
+        } else if (directionIndex === 3) {
+          //* ? x ? *   * x * *
+          //? x x ? *   * x x *
+          //* ? x ? *   * x ? *
+          if (key === 'left') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          } else if (key === 'right') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          }
+        } else if (directionIndex === 1) {
+          if (key === 'left') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          } else if (key === 'right') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 4 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          }
+        } else if (directionIndex === 2) {
+          // ? x x x ?
+          // * ? x ? *
+          if (key === 'left') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          } else if (key === 'right') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 4 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          }
+        }
+      } else if (name === 'I') {
+        let imageData = this.screenCtx.getImageData(x - this.unitSize, y, this.unitSize * 6, this.unitSize * 4)
+        if (directionIndex === 3) {
+          // * x * *  left right  * * x *
+          // * x * *              * * x *
+          // * x * *              * * x *
+          // * x * *              * * x *
+          // * ? * *              * * ? *
+          //                          行                                           列
+          if (key === 'left') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((3 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          } else if (key === 'right') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((3 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          }
+        } else if (directionIndex === 1) {
+          if (key === 'left') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((3 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          } else if (key === 'right') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 4 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 4 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 4 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((3 * this.unitSize * (imageData.width * 4)) + 4 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          }
+        } else {
+          //? x x x x ?
+          //* * * * * *
+          if (key === 'left') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          } else if (key === 'right') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 5 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          }
+        }
+      } else if (name === 'Z') {
+        // up             right         down            left
+        //? x x * *       * ? x * *       x x * *         * x * *
+        //* ? x x *       ? x x * *       ? x x *         x x * *
+        //* * * * *       ? x ? * *       * ? ? *         x ? * *
+        //                ?                             ?
+        let imageData = this.screenCtx.getImageData(x - this.unitSize, y, this.unitSize * 5, this.unitSize * 3)
+        if (directionIndex === 0 || directionIndex === 2) {
+          if (key === 'left') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          } else if (key === 'right') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 4 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          }
+        } else {
+          if (key === 'left') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          } else if (key === 'right') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          }
+        }
+      } else if (name === 'ReZ') {
+        // up             right
+        //* ? x x *        x * * *
+        //? x x ? *        x x * *
+        //* ? ? * *        ? x * *
+        //                  ?
+        let imageData = this.screenCtx.getImageData(x - this.unitSize, y, this.unitSize * 5, this.unitSize * 3)
+        if (directionIndex === 0 || directionIndex === 2) {
+          if (key === 'left') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          } else if (key === 'right') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 4 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          }
+        } else {
+          if (key === 'left') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          } else if (key === 'right') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          }
+        }
+      } else if (name === 'L') {
+        // up             right         down            left
+        // * * x *        x * * *       x x x *         x x * *
+        // x x x *        x * * *       x ? ? *         ? x * *
+        // ? ? ? *        x x * *       ? * * *         * x * *
+        //                ? ?                           * ?
+        let imageData = this.screenCtx.getImageData(x - this.unitSize, y, this.unitSize * 5, this.unitSize * 3);
+        if (directionIndex === 0) {
+          if (key === 'left') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          } else if (key === 'right') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 4 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 4 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          }
+        } else if (directionIndex === 2) {
+          if (key === 'left') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          } else if (key === 'right') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 4 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          }
+        } else if (directionIndex === 1) {
+          if (key === 'left') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          } else if (key === 'right') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          }
+        } else if (directionIndex === 3) {
+          if (key === 'left') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          } else if (key === 'right') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          }
+        }
+      } else if (name === 'ReL') {
+        // up             right         down            left
+        // x * * *        x x * *       x x x *         * x * *
+        // x x x *        x ? * *       ? ? x *         * x * *
+        // ? ? ? *        x * * *       * * ? *         x x * *
+        //                ?                             ? ?
+        let imageData = this.screenCtx.getImageData(x - this.unitSize, y, this.unitSize * 5, this.unitSize * 3);
+        if (directionIndex === 0) {
+          if (key === 'left') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          } else if (key === 'right') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 4 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          }
+        } else if (directionIndex === 2) {
+          if (key === 'left') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          } else if (key === 'right') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 4 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 4 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          }
+        } else if (directionIndex === 3) {
+          if (key === 'left') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          } else if (key === 'right') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          }
+        } else if (directionIndex === 1) {
+          if (key === 'left') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          } else if (key === 'right') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          }
+        }
+      } else if (name === 'Tian') {
+        // x x
+        // x x
+        // ? ?
+        let imageData = this.screenCtx.getImageData(x - this.unitSize, y, this.unitSize * 4, this.unitSize * 2);
+        if (key === 'left') {
+          if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
+              (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255)) {
+            contactFlag = true;
+          }
+        } else if (key === 'right') {
+          if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255) ||
+              (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255)) {
+            contactFlag = true;
+          }
+        }
+      }
+      return contactFlag;
     },
     // 监听键盘事件
     // 移动之后要重新碰撞检测
@@ -570,9 +905,13 @@ export default {
         // e.key === w s a d ArrowUp ArrowDown ArrowLeft  ArrowRight
         if (e.key === 'ArrowLeft' || e.key === 'a') {
           // 往左一格
-          this.currentBlock.x -= this.unitSize;
+          if (!this.rowCollisionDetection('left')) {
+            this.currentBlock.x -= this.unitSize;
+          }
         } else if (e.key === 'ArrowRight' || e.key === 'd') {
-          this.currentBlock.x += this.unitSize;
+          if (!this.rowCollisionDetection('right')) {
+            this.currentBlock.x += this.unitSize;
+          }
         } else if (e.key === 'j') {
           // 左旋
           this.currentBlock.directionIndex--
@@ -587,6 +926,23 @@ export default {
           }
         } else if (e.key === 'r') {
           this.restartGame()
+        } else if (e.key === 'i') {
+          // 直接落下
+          do {
+            this.currentBlock.y += this.unitSize
+          } while (!this.collisionDetection());
+          // 完成后直接 出现下一块   保存然后继续
+          if (this.contactStartTime) {
+            this.updateCanvas();  // 落下方块
+            this.line += this.removeLine()     // 消行
+            this.lastImageData = this.screenCtx.getImageData(0, 0, this.width, this.height);
+            this.randomList();
+          }
+        } else if (e.key === 'ArrowDown' || e.key === 's') {
+          // 速降
+          if (!this.collisionDetection()) {
+            this.currentBlock.y += this.unitSize;
+          }
         }
         this.updateCanvas()
         this.collisionDetection();
@@ -597,7 +953,7 @@ export default {
 
       this.screenCtx.clearRect(0, 0, this.width, this.height)
       if (this.lastImageData) {
-        this.screenCtx.putImageData(this.lastImageData, 0, this.line * this.unitSize)
+        this.screenCtx.putImageData(this.lastImageData, 0, 0)
       }
       this['draw' + this.currentBlock.name](this.currentBlock.x, this.currentBlock.y);
     },
@@ -610,8 +966,8 @@ export default {
       // 游戏中 最上面的最中间那两块如果被填充，则判定为失败
       let imageData = this.screenCtx.getImageData(0, 0, this.width, this.unitSize);
       // * * * * ? ? * * * *
-      if ((imageData.data[4 * this.unitSize + 3] === 255) &&
-          imageData.data[5 * this.unitSize + 3] === 255) {
+      if ((imageData.data[4 * this.unitSize * 4 + 3] === 255) &&
+          imageData.data[5 * this.unitSize * 4 + 3] === 255) {
         this.gameIsEnd = true;
       }
     },
@@ -621,7 +977,8 @@ export default {
       this.frameTimeout = null;
       this.contactStartTime = false;
       this.lastImageData = false;
-      this.init();
+      this.randomList()
+      this.run()
     },
     // 消行
     removeLine() {
@@ -637,6 +994,10 @@ export default {
         if (lineFull) {
           // 消除该行
           this.screenCtx.clearRect(0, i * this.unitSize, this.width, this.unitSize);
+          // 在这里把行落下
+          // 把这一行上面的方块都往下移
+          let imageData = this.screenCtx.getImageData(0, 0, this.width, this.unitSize * i);
+          this.screenCtx.putImageData(imageData, 0, this.unitSize)
           line++
         }
       }
@@ -658,7 +1019,12 @@ bd = 1px solid #000000
     border-bottom bd
     display flex
     padding-top: 40px;
-
+    position relative
+    .score{
+      position absolute
+      left: 10px
+      top: 10px
+    }
     .screen
       width 320px
       height 460px
@@ -667,7 +1033,7 @@ bd = 1px solid #000000
 
       .canvas
         float right
-
+        border-left bd
     .top-right
       width 150px
       height 460px
