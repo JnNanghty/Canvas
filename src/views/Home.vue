@@ -1,8 +1,9 @@
 <template>
   <div class="home">
     <div class="top-area">
-      <div class="score">{{line}}</div>
+      <div class="score">{{ line }}</div>
       <div class="screen">
+        <canvas class="hold-block" ref="holdBlockCanvas" :width="unitSize * 4" :height="unitSize * 4"></canvas>
         <!--   20 row  10 col  23px/格   -->
         <canvas class="canvas" ref="screenCanvas" :width="width" :height="height"></canvas>
       </div>
@@ -38,14 +39,18 @@ export default {
     return {
       screen: null,
       screenCtx: null,
+      holdCtx: null,
       unitSize: 23,
       width: 230,
       height: 460,
       usedBlock: [],    // 已经使用过的
       notUseBlock: [],  // 未使用的
       gameIsEnd: false,
-      currentBlock: {name: '', x: 0, y: 0, directionIndex: 0}, // direction
-      speed: 1000,   // 每帧后过多少毫秒动一下
+      currentBlock: {name: '', x: 0, y: 0, directionIndex: 0},
+      nextBlock: {name: '', x: 0, y: 0, directionIndex: 0},
+      holdBlock: {name: '', x: 0, y: 0, directionIndex: 0},
+      futureBlockArray: [], // 3 块
+      speed: 1000,   // 速度
       frameTimeout: null,
       contactStartTime: false,  // 碰撞开始时间
       directionArray: ['up', 'right', 'down', 'left'],
@@ -84,6 +89,7 @@ export default {
     drawLine() {
       this.screen = this.$refs.screenCanvas
       let screenCtx = this.screen.getContext('2d')
+      this.holdCtx = this.$refs.holdBlockCanvas.getContext('2d')
       this.screenCtx = screenCtx;
       screenCtx.strokeStyle = '#f00'
       for (let i = 0; i < 10; i++) {
@@ -116,7 +122,7 @@ export default {
       x = x || this.currentBlock.x
       y = y || this.currentBlock.y
       let bottomY = y
-      while (!this.collisionDetection()){
+      while (!this.collisionDetection()) {
         this.currentBlock.y += this.unitSize
         bottomY = this.currentBlock.y
       }
@@ -124,6 +130,7 @@ export default {
 
       // * x * *
       // x x x *
+      // * * * *
       this.screenCtx.fillStyle = "#2fff00"
       this.screenCtx.strokeStyle = "#2fff00"
       let {directionIndex} = this.currentBlock
@@ -131,12 +138,10 @@ export default {
         // 如果超出了画布， 那就制止
         if (x >= 7 * this.unitSize) x = 7 * this.unitSize;
         if (x <= 0) x = 0;
-        this.screenCtx.fillRect(x + this.unitSize, y, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x, y + this.unitSize, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize, y + this.unitSize, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize * 2, y + this.unitSize, this.unitSize, this.unitSize);
-
-
+        this.screenCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 0, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 0, y + this.unitSize * 1, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 1, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 2, y + this.unitSize * 1, this.unitSize, this.unitSize);
 
         this.screenCtx.strokeRect(x + this.unitSize, bottomY, this.unitSize, this.unitSize);
         this.screenCtx.strokeRect(x, bottomY + this.unitSize, this.unitSize, this.unitSize);
@@ -145,10 +150,10 @@ export default {
       } else if (directionIndex === 2) {
         if (x >= 7 * this.unitSize) x = 7 * this.unitSize;
         if (x <= 0) x = 0;
-        this.screenCtx.fillRect(x, y + this.unitSize, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize, y + this.unitSize, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize * 2, y + this.unitSize, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize, y + this.unitSize * 2, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 0, y + this.unitSize * 1, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 1, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 2, y + this.unitSize * 1, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 2, this.unitSize, this.unitSize);
 
 
         this.screenCtx.strokeRect(x, bottomY + this.unitSize, this.unitSize, this.unitSize);
@@ -158,10 +163,10 @@ export default {
       } else if (directionIndex === 3) {
         if (x >= 8 * this.unitSize) x = 8 * this.unitSize;
         if (x <= 0) x = 0;
-        this.screenCtx.fillRect(x + this.unitSize, y, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x, y + this.unitSize, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize, y + this.unitSize, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize, y + this.unitSize * 2, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 0, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 0, y + this.unitSize * 1, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 1, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 2, this.unitSize, this.unitSize);
 
         this.screenCtx.strokeRect(x + this.unitSize, bottomY, this.unitSize, this.unitSize);
         this.screenCtx.strokeRect(x, bottomY + this.unitSize, this.unitSize, this.unitSize);
@@ -170,10 +175,10 @@ export default {
       } else if (directionIndex === 1) {
         if (x >= 7 * this.unitSize) x = 7 * this.unitSize;
         if (x <= -this.unitSize) x = -this.unitSize;
-        this.screenCtx.fillRect(x + this.unitSize, y, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize, y + this.unitSize, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize * 2, y + this.unitSize, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize, y + this.unitSize * 2, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 0, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 1, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 2, y + this.unitSize * 1, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 2, this.unitSize, this.unitSize);
 
         this.screenCtx.strokeRect(x + this.unitSize, bottomY, this.unitSize, this.unitSize);
         this.screenCtx.strokeRect(x + this.unitSize, bottomY + this.unitSize, this.unitSize, this.unitSize);
@@ -189,7 +194,7 @@ export default {
       x = x || this.currentBlock.x
       y = y || this.currentBlock.y
       let bottomY = y
-      while (!this.collisionDetection()){
+      while (!this.collisionDetection()) {
         this.currentBlock.y += this.unitSize
         bottomY = this.currentBlock.y
       }
@@ -201,8 +206,8 @@ export default {
       if (directionIndex === 1) {
         if (x >= 7 * this.unitSize) x = 7 * this.unitSize;
         if (x <= -2 * this.unitSize) x = -2 * this.unitSize;
-        this.screenCtx.fillRect(x + this.unitSize * 2, y, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize * 2, y + this.unitSize, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 2, y + this.unitSize * 0, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 2, y + this.unitSize * 1, this.unitSize, this.unitSize);
         this.screenCtx.fillRect(x + this.unitSize * 2, y + this.unitSize * 2, this.unitSize, this.unitSize);
         this.screenCtx.fillRect(x + this.unitSize * 2, y + this.unitSize * 3, this.unitSize, this.unitSize);
 
@@ -213,10 +218,10 @@ export default {
       } else if (directionIndex === 3) {
         if (x >= 8 * this.unitSize) x = 8 * this.unitSize;
         if (x <= -this.unitSize) x = -this.unitSize;
-        this.screenCtx.fillRect(x + this.unitSize, y, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize, y + this.unitSize, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize, y + this.unitSize * 2, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize, y + this.unitSize * 3, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 0, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 1, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 2, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 3, this.unitSize, this.unitSize);
 
         this.screenCtx.strokeRect(x + this.unitSize, bottomY, this.unitSize, this.unitSize);
         this.screenCtx.strokeRect(x + this.unitSize, bottomY + this.unitSize, this.unitSize, this.unitSize);
@@ -225,10 +230,10 @@ export default {
       } else {
         if (x >= 6 * this.unitSize) x = 6 * this.unitSize;
         if (x <= 0) x = 0;
-        this.screenCtx.fillRect(x, y, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize, y, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize * 2, y, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize * 3, y, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 0, y + +this.unitSize * 0, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 1, y + +this.unitSize * 0, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 2, y + +this.unitSize * 0, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 3, y + +this.unitSize * 0, this.unitSize, this.unitSize);
 
         this.screenCtx.strokeRect(x, bottomY, this.unitSize, this.unitSize);
         this.screenCtx.strokeRect(x + this.unitSize, bottomY, this.unitSize, this.unitSize);
@@ -244,7 +249,7 @@ export default {
       x = x || this.currentBlock.x
       y = y || this.currentBlock.y
       let bottomY = y
-      while (!this.collisionDetection()){
+      while (!this.collisionDetection()) {
         this.currentBlock.y += this.unitSize
         bottomY = this.currentBlock.y
       }
@@ -255,10 +260,10 @@ export default {
       if (directionIndex === 0 || directionIndex === 2) {
         if (x >= 7 * this.unitSize) x = 7 * this.unitSize;
         if (x <= 0) x = 0;
-        this.screenCtx.fillRect(x, y, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize, y, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize, y + this.unitSize, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize * 2, y + this.unitSize, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 0, y + this.unitSize * 0, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 0, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 1, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 2, y + this.unitSize * 1, this.unitSize, this.unitSize);
 
         this.screenCtx.strokeRect(x, bottomY, this.unitSize, this.unitSize);
         this.screenCtx.strokeRect(x + this.unitSize, bottomY, this.unitSize, this.unitSize);
@@ -267,10 +272,10 @@ export default {
       } else if (directionIndex === 1 || directionIndex === 3) {
         if (x >= 8 * this.unitSize) x = 8 * this.unitSize;
         if (x <= 0) x = 0;
-        this.screenCtx.fillRect(x + this.unitSize, y, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x, y + this.unitSize, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize, y + this.unitSize, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x, y + this.unitSize * 2, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 0, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 0, y + this.unitSize * 1, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 1, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 0, y + this.unitSize * 2, this.unitSize, this.unitSize);
 
         this.screenCtx.strokeRect(x + this.unitSize, bottomY, this.unitSize, this.unitSize);
         this.screenCtx.strokeRect(x, bottomY + this.unitSize, this.unitSize, this.unitSize);
@@ -286,7 +291,7 @@ export default {
       x = x || this.currentBlock.x
       y = y || this.currentBlock.y
       let bottomY = y
-      while (!this.collisionDetection()){
+      while (!this.collisionDetection()) {
         this.currentBlock.y += this.unitSize
         bottomY = this.currentBlock.y
       }
@@ -297,10 +302,10 @@ export default {
       if (directionIndex === 0 || directionIndex === 2) {
         if (x >= 7 * this.unitSize) x = 7 * this.unitSize;
         if (x <= 0) x = 0;
-        this.screenCtx.fillRect(x, y + this.unitSize, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize, y + this.unitSize, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize, y, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize * 2, y, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 0, y + this.unitSize * 1, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 1, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 0, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 2, y + this.unitSize * 0, this.unitSize, this.unitSize);
 
         this.screenCtx.strokeRect(x, bottomY + this.unitSize, this.unitSize, this.unitSize);
         this.screenCtx.strokeRect(x + this.unitSize, bottomY + this.unitSize, this.unitSize, this.unitSize);
@@ -309,10 +314,10 @@ export default {
       } else if (directionIndex === 1 || directionIndex === 3) {
         if (x >= 8 * this.unitSize) x = 8 * this.unitSize;
         if (x <= 0) x = 0;
-        this.screenCtx.fillRect(x, y, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x, y + this.unitSize, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize, y + this.unitSize, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize, y + this.unitSize * 2, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 0, y + this.unitSize * 0, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 0, y + this.unitSize * 1, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 1, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 2, this.unitSize, this.unitSize);
 
         this.screenCtx.strokeRect(x, bottomY, this.unitSize, this.unitSize);
         this.screenCtx.strokeRect(x, bottomY + this.unitSize, this.unitSize, this.unitSize);
@@ -328,7 +333,7 @@ export default {
       x = x || this.currentBlock.x
       y = y || this.currentBlock.y
       let bottomY = y
-      while (!this.collisionDetection()){
+      while (!this.collisionDetection()) {
         this.currentBlock.y += this.unitSize
         bottomY = this.currentBlock.y
       }
@@ -339,10 +344,10 @@ export default {
       if (directionIndex === 0) {
         if (x <= 0) x = 0;
         if (x >= 7 * this.unitSize) x = 7 * this.unitSize;
-        this.screenCtx.fillRect(x, y + this.unitSize, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize, y + this.unitSize, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize * 2, y + this.unitSize, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize * 2, y, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 0, y + this.unitSize * 1, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 1, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 2, y + this.unitSize * 1, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 2, y + this.unitSize * 0, this.unitSize, this.unitSize);
 
         this.screenCtx.strokeRect(x, bottomY + this.unitSize, this.unitSize, this.unitSize);
         this.screenCtx.strokeRect(x + this.unitSize, bottomY + this.unitSize, this.unitSize, this.unitSize);
@@ -351,10 +356,10 @@ export default {
       } else if (directionIndex === 1) {
         if (x <= 0) x = 0;
         if (x >= 8 * this.unitSize) x = 8 * this.unitSize;
-        this.screenCtx.fillRect(x, y, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x, y + this.unitSize, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x, y + this.unitSize * 2, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize, y + this.unitSize * 2, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 0, y + this.unitSize * 0, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 0, y + this.unitSize * 1, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 0, y + this.unitSize * 2, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 2, this.unitSize, this.unitSize);
 
         this.screenCtx.strokeRect(x, bottomY, this.unitSize, this.unitSize);
         this.screenCtx.strokeRect(x, bottomY + this.unitSize, this.unitSize, this.unitSize);
@@ -363,10 +368,10 @@ export default {
       } else if (directionIndex === 2) {
         if (x <= 0) x = 0;
         if (x >= 7 * this.unitSize) x = 7 * this.unitSize;
-        this.screenCtx.fillRect(x, y, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize, y, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize * 2, y, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x, y + this.unitSize, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 0, y + this.unitSize * 0, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 0, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 2, y + this.unitSize * 0, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 0, y + this.unitSize * 1, this.unitSize, this.unitSize);
 
         this.screenCtx.strokeRect(x, bottomY, this.unitSize, this.unitSize);
         this.screenCtx.strokeRect(x + this.unitSize, bottomY, this.unitSize, this.unitSize);
@@ -375,10 +380,10 @@ export default {
       } else if (directionIndex === 3) {
         if (x <= 0) x = 0;
         if (x >= 8 * this.unitSize) x = 8 * this.unitSize;
-        this.screenCtx.fillRect(x, y, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize, y, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize, y + this.unitSize, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize, y + this.unitSize * 2, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 0, y + this.unitSize * 0, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 0, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 1, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 2, this.unitSize, this.unitSize);
 
         this.screenCtx.strokeRect(x, bottomY, this.unitSize, this.unitSize);
         this.screenCtx.strokeRect(x + this.unitSize, bottomY, this.unitSize, this.unitSize);
@@ -394,7 +399,7 @@ export default {
       x = x || this.currentBlock.x
       y = y || this.currentBlock.y
       let bottomY = y
-      while (!this.collisionDetection()){
+      while (!this.collisionDetection()) {
         this.currentBlock.y += this.unitSize
         bottomY = this.currentBlock.y
       }
@@ -406,10 +411,10 @@ export default {
       if (directionIndex === 0) {
         if (x <= 0) x = 0;
         if (x >= 7 * this.unitSize) x = 7 * this.unitSize;
-        this.screenCtx.fillRect(x, y + this.unitSize, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize, y + this.unitSize, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize * 2, y + this.unitSize, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x, y, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 0, y + this.unitSize * 1, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 1, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 2, y + this.unitSize * 1, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 0, y + this.unitSize * 0, this.unitSize, this.unitSize);
 
         this.screenCtx.strokeRect(x, bottomY + this.unitSize, this.unitSize, this.unitSize);
         this.screenCtx.strokeRect(x + this.unitSize, bottomY + this.unitSize, this.unitSize, this.unitSize);
@@ -418,10 +423,10 @@ export default {
       } else if (directionIndex === 1) {
         if (x >= 8 * this.unitSize) x = 8 * this.unitSize;
         if (x <= 0) x = 0;
-        this.screenCtx.fillRect(x, y, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x, y + this.unitSize, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x, y + this.unitSize * 2, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize, y, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 0, y + this.unitSize * 0, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 0, y + this.unitSize * 1, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 0, y + this.unitSize * 2, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 0, this.unitSize, this.unitSize);
 
         this.screenCtx.strokeRect(x, bottomY, this.unitSize, this.unitSize);
         this.screenCtx.strokeRect(x, bottomY + this.unitSize, this.unitSize, this.unitSize);
@@ -430,10 +435,10 @@ export default {
       } else if (directionIndex === 2) {
         if (x <= 0) x = 0;
         if (x >= 7 * this.unitSize) x = 7 * this.unitSize;
-        this.screenCtx.fillRect(x, y, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize, y, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize * 2, y, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize * 2, y + this.unitSize, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 0, y + this.unitSize * 0, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 0, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 2, y + this.unitSize * 0, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 2, y + this.unitSize * 1, this.unitSize, this.unitSize);
 
         this.screenCtx.strokeRect(x, bottomY, this.unitSize, this.unitSize);
         this.screenCtx.strokeRect(x + this.unitSize, bottomY, this.unitSize, this.unitSize);
@@ -442,10 +447,10 @@ export default {
       } else if (directionIndex === 3) {
         if (x <= 0) x = 0;
         if (x >= 8 * this.unitSize) x = 8 * this.unitSize;
-        this.screenCtx.fillRect(x, y + this.unitSize * 2, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize, y, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize, y + this.unitSize, this.unitSize, this.unitSize);
-        this.screenCtx.fillRect(x + this.unitSize, y + this.unitSize * 2, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 0, y + this.unitSize * 2, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 0, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 1, this.unitSize, this.unitSize);
+        this.screenCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 2, this.unitSize, this.unitSize);
 
         this.screenCtx.strokeRect(x, bottomY + this.unitSize * 2, this.unitSize, this.unitSize);
         this.screenCtx.strokeRect(x + this.unitSize, bottomY, this.unitSize, this.unitSize);
@@ -461,7 +466,7 @@ export default {
       x = x || this.currentBlock.x
       y = y || this.currentBlock.y
       let bottomY = y
-      while (!this.collisionDetection()){
+      while (!this.collisionDetection()) {
         this.currentBlock.y += this.unitSize
         bottomY = this.currentBlock.y
       }
@@ -470,16 +475,109 @@ export default {
       // x x * *
       if (x >= 8 * this.unitSize) x = 8 * this.unitSize;
       if (x <= 0) x = 0;
-      this.screenCtx.fillRect(x, y, this.unitSize, this.unitSize);
-      this.screenCtx.fillRect(x + this.unitSize, y, this.unitSize, this.unitSize);
-      this.screenCtx.fillRect(x, y + this.unitSize, this.unitSize, this.unitSize);
-      this.screenCtx.fillRect(x + this.unitSize, y + this.unitSize, this.unitSize, this.unitSize);
+      this.screenCtx.fillRect(x + this.unitSize * 0, y + this.unitSize * 0, this.unitSize, this.unitSize);
+      this.screenCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 0, this.unitSize, this.unitSize);
+      this.screenCtx.fillRect(x + this.unitSize * 0, y + this.unitSize * 1, this.unitSize, this.unitSize);
+      this.screenCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 1, this.unitSize, this.unitSize);
 
       this.screenCtx.strokeRect(x, bottomY, this.unitSize, this.unitSize);
       this.screenCtx.strokeRect(x + this.unitSize, bottomY, this.unitSize, this.unitSize);
       this.screenCtx.strokeRect(x, bottomY + this.unitSize, this.unitSize, this.unitSize);
       this.screenCtx.strokeRect(x + this.unitSize, bottomY + this.unitSize, this.unitSize, this.unitSize);
       this.currentBlock.x = x
+    },
+    // T
+    holdDrawT(x, y) {
+      x = x || this.holdBlock.x
+      y = y || this.holdBlock.y
+
+      // * x * *
+      // x x x *
+      // * * * *
+      this.holdCtx.fillStyle = "#2fff00"
+      this.holdCtx.strokeStyle = "#2fff00"
+
+      this.holdCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 0, this.unitSize, this.unitSize);
+      this.holdCtx.fillRect(x + this.unitSize * 0, y + this.unitSize * 1, this.unitSize, this.unitSize);
+      this.holdCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 1, this.unitSize, this.unitSize);
+      this.holdCtx.fillRect(x + this.unitSize * 2, y + this.unitSize * 1, this.unitSize, this.unitSize);
+    },
+    // 棍
+    holdDrawI(x, y) {
+      this.holdCtx.fillStyle = "#00ffc2"
+      this.holdCtx.strokeStyle = "#00ffc2"
+      x = x || this.holdBlock.x
+      y = y || this.holdBlock.y
+      this.holdCtx.fillRect(x + this.unitSize * 0, y + +this.unitSize * 0, this.unitSize, this.unitSize);
+      this.holdCtx.fillRect(x + this.unitSize * 1, y + +this.unitSize * 0, this.unitSize, this.unitSize);
+      this.holdCtx.fillRect(x + this.unitSize * 2, y + +this.unitSize * 0, this.unitSize, this.unitSize);
+      this.holdCtx.fillRect(x + this.unitSize * 3, y + +this.unitSize * 0, this.unitSize, this.unitSize);
+    },
+    // Z
+    holdDrawZ(x, y) {
+      this.holdCtx.fillStyle = "#0052ff"
+      this.holdCtx.strokeStyle = "#0052ff"
+      x = x || this.holdBlock.x
+      y = y || this.holdBlock.y
+      // x x * *
+      // * x x *
+      this.holdCtx.fillRect(x + this.unitSize * 0, y + this.unitSize * 0, this.unitSize, this.unitSize);
+      this.holdCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 0, this.unitSize, this.unitSize);
+      this.holdCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 1, this.unitSize, this.unitSize);
+      this.holdCtx.fillRect(x + this.unitSize * 2, y + this.unitSize * 1, this.unitSize, this.unitSize);
+    },
+    // 反Z
+    holdDrawReZ(x, y) {
+      this.holdCtx.fillStyle = "#c700ff"
+      this.holdCtx.strokeStyle = "#c700ff"
+      x = x || this.holdBlock.x
+      y = y || this.holdBlock.y
+      // * x x *
+      // x x * *
+      this.holdCtx.fillRect(x + this.unitSize * 0, y + this.unitSize * 1, this.unitSize, this.unitSize);
+      this.holdCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 1, this.unitSize, this.unitSize);
+      this.holdCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 0, this.unitSize, this.unitSize);
+      this.holdCtx.fillRect(x + this.unitSize * 2, y + this.unitSize * 0, this.unitSize, this.unitSize);
+    },
+    // L
+    holdDrawL(x, y) {
+      this.holdCtx.fillStyle = "#ff006a"
+      this.holdCtx.strokeStyle = "#ff006a"
+      x = x || this.holdBlock.x
+      y = y || this.holdBlock.y
+      // * * x *
+      // x x x *
+      this.holdCtx.fillRect(x + this.unitSize * 0, y + this.unitSize * 1, this.unitSize, this.unitSize);
+      this.holdCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 1, this.unitSize, this.unitSize);
+      this.holdCtx.fillRect(x + this.unitSize * 2, y + this.unitSize * 1, this.unitSize, this.unitSize);
+      this.holdCtx.fillRect(x + this.unitSize * 2, y + this.unitSize * 0, this.unitSize, this.unitSize);
+    },
+    // 反 L
+    holdDrawReL(x, y) {
+      this.holdCtx.fillStyle = "#ff0000"
+      this.holdCtx.strokeStyle = "#ff0000"
+      x = x || this.holdBlock.x
+      y = y || this.holdBlock.y
+      // x * * *
+      // x x x *
+
+      this.holdCtx.fillRect(x + this.unitSize * 0, y + this.unitSize * 1, this.unitSize, this.unitSize);
+      this.holdCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 1, this.unitSize, this.unitSize);
+      this.holdCtx.fillRect(x + this.unitSize * 2, y + this.unitSize * 1, this.unitSize, this.unitSize);
+      this.holdCtx.fillRect(x + this.unitSize * 0, y + this.unitSize * 0, this.unitSize, this.unitSize);
+    },
+    // 田
+    holdDrawTian(x, y) {
+      this.holdCtx.fillStyle = "#ff6a00"
+      this.holdCtx.strokeStyle = "#ff6a00"
+      x = x || this.holdBlock.x
+      y = y || this.holdBlock.y
+
+      this.holdCtx.fillRect(x + this.unitSize * 0, y + this.unitSize * 0, this.unitSize, this.unitSize);
+      this.holdCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 0, this.unitSize, this.unitSize);
+      this.holdCtx.fillRect(x + this.unitSize * 0, y + this.unitSize * 1, this.unitSize, this.unitSize);
+      this.holdCtx.fillRect(x + this.unitSize * 1, y + this.unitSize * 1, this.unitSize, this.unitSize);
+
     },
     // 运动 更新每一帧
     run() {
@@ -1056,250 +1154,185 @@ export default {
     },
     // 旋转碰撞检测
     // 左旋  判断附近一片的方块，可以就转， 不行就不给转
+    // 当前的方向  和下一个方向   下一个方向与当前方向的差
     rotateCollisionDetection(key) {
       let {name, directionIndex, x, y} = this.currentBlock
       let contactFlag = false;
+
+
       if (name === 'T') {
-        let imageData = this.screenCtx.getImageData(x - this.unitSize, y, this.unitSize * 5, this.unitSize * 3)
+        let imageData = this.screenCtx.getImageData(x, y, this.unitSize * 4, this.unitSize * 3)
         if (directionIndex === 0) {
-          //* * x * *
-          //* x x x *
-          //* * * * *
-          if (key === 'left') {
-            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255)) {
-              contactFlag = true;
-            }
-          } else if (key === 'right') {
-            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 4 * this.unitSize * 4) + 3] === 255)) {
-              contactFlag = true;
-            }
+          //* x * *
+          //x x x *
+          //* ? * *
+          if ((imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255)) {
+            contactFlag = true;
           }
         } else if (directionIndex === 3) {
-          //* ? x ? *   * x * *
-          //? x x ? *   * x x *
-          //* ? x ? *   * x ? *
-          if (key === 'left') {
-            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255)) {
-              contactFlag = true;
-            }
-          } else if (key === 'right') {
-            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255)) {
-              contactFlag = true;
-            }
+          // * x * *   * x * *
+          // x x ? *   ? x x *
+          // * x * *   * x * *
+          if ((imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255)) {
+            contactFlag = true;
           }
         } else if (directionIndex === 1) {
-          if (key === 'left') {
-            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255)) {
-              contactFlag = true;
-            }
-          } else if (key === 'right') {
-            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 4 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255)) {
-              contactFlag = true;
-            }
+          if ((imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255)) {
+            contactFlag = true;
           }
         } else if (directionIndex === 2) {
-          // * * * * *
-          // ? x x x ?
-          // * ? x ? *
-          if (key === 'left') {
-            if ((imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255)) {
-              contactFlag = true;
-            }
-          } else if (key === 'right') {
-            if ((imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 4 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255)) {
-              contactFlag = true;
-            }
+          // * ? * *
+          // x x x *
+          // * x * *
+          if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255)) {
+            contactFlag = true;
           }
         }
       } else if (name === 'I') {
-        let imageData = this.screenCtx.getImageData(x - this.unitSize, y, this.unitSize * 6, this.unitSize * 4)
+        let imageData = this.screenCtx.getImageData(x, y, this.unitSize * 6, this.unitSize * 4)
         if (directionIndex === 3) {
-          // * x * *  left right  * * x *
+          // ? x ? ?  left right  * * x *
           // * x * *              * * x *
           // * x * *              * * x *
           // * x * *              * * x *
           // * ? * *              * * ? *
           //                          行                                           列
+          if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
+              (imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255) ||
+              (imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255)) {
+            contactFlag = true;
+          }
+        } else if (directionIndex === 1) {
+          if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
+              (imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255) ||
+              (imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255)) {
+            contactFlag = true;
+          }
+        } else if (directionIndex === 0) {
+          //? x x x x ?
+          //* ? * * * *
+          //* ?
+          //* ?
           if (key === 'left') {
-            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255) ||
+            if ((imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((3 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          } else if (key === 'right') {
+            if ((imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((3 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          }
+        } else if (directionIndex === 2) {
+          if (key === 'left') {
+            if ((imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255) ||
                 (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255) ||
                 (imageData.data[((3 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255)) {
               contactFlag = true;
             }
           } else if (key === 'right') {
-            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((3 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255)) {
-              contactFlag = true;
-            }
-          }
-        } else if (directionIndex === 1) {
-          if (key === 'left') {
-            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((3 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255)) {
-              contactFlag = true;
-            }
-          } else if (key === 'right') {
-            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 4 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 4 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 4 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((3 * this.unitSize * (imageData.width * 4)) + 4 * this.unitSize * 4) + 3] === 255)) {
-              contactFlag = true;
-            }
-          }
-        } else {
-          //? x x x x ?
-          //* * * * * *
-          if (key === 'left') {
-            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255)) {
-              contactFlag = true;
-            }
-          } else if (key === 'right') {
-            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 5 * this.unitSize * 4) + 3] === 255)) {
+            if ((imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((3 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255)) {
               contactFlag = true;
             }
           }
         }
       } else if (name === 'Z') {
         // up             right         down            left
-        //? x x * *       * ? x * *       x x * *         * x * *
-        //* ? x x *       ? x x * *       ? x x *         x x * *
-        //* * * * *       ? x ? * *       * ? ? *         x ? * *
-        //                ?                             ?
-        let imageData = this.screenCtx.getImageData(x - this.unitSize, y, this.unitSize * 5, this.unitSize * 3)
+        // x x * *        ? x * *       x x * *         * x * *
+        // ? x x *        x x ? *       ? x x *         x x * *
+        // ? * * *        x * * *       * ? ? *         x ? * *
+        //
+        let imageData = this.screenCtx.getImageData(x, y, this.unitSize * 5, this.unitSize * 3)
         if (directionIndex === 0 || directionIndex === 2) {
-          if (key === 'left') {
-            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255)) {
-              contactFlag = true;
-            }
-          } else if (key === 'right') {
-            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 4 * this.unitSize * 4) + 3] === 255)) {
-              contactFlag = true;
-            }
+          if ((imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
+              (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255)) {
+            contactFlag = true;
           }
         } else {
-          if (key === 'left') {
-            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255)) {
-              contactFlag = true;
-            }
-          } else if (key === 'right') {
-            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255)) {
-              contactFlag = true;
-            }
+          if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
+              (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255)) {
+            contactFlag = true;
           }
         }
       } else if (name === 'ReZ') {
         // up             right
-        //* ? x x *        x * * *
-        //? x x ? *        x x * *
-        //* ? ? * *        ? x * *
+        // ? x x *        x * * *
+        // x x * *        x x * *
+        // * ? * *        ? x * *
         //                  ?
-        let imageData = this.screenCtx.getImageData(x - this.unitSize, y, this.unitSize * 5, this.unitSize * 3)
+        let imageData = this.screenCtx.getImageData(x, y, this.unitSize * 5, this.unitSize * 3)
         if (directionIndex === 0 || directionIndex === 2) {
-          if (key === 'left') {
-            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255)) {
-              contactFlag = true;
-            }
-          } else if (key === 'right') {
-            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 4 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255)) {
-              contactFlag = true;
-            }
+          if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
+              (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255)) {
+            contactFlag = true;
           }
         } else {
-          if (key === 'left') {
-            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255)) {
-              contactFlag = true;
-            }
-          } else if (key === 'right') {
-            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255)) {
-              contactFlag = true;
-            }
+          if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255) ||
+              (imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255)) {
+            contactFlag = true;
           }
         }
       } else if (name === 'L') {
         // up             right         down            left
-        // * * x *        x * * *       x x x *         x x * *
-        // x x x *        x * * *       x ? ? *         ? x * *
-        // ? ? ? *        x x * *       ? * * *         * x * *
+        // ? ? x *        x * ? *       x x x *         x x ? *
+        // x x x *        x ? ? *       x ? * *         ? x ? *
+        // * ? * *        x x * *       ? ? * *         * x * *
         //                ? ?                           * ?
-        let imageData = this.screenCtx.getImageData(x - this.unitSize, y, this.unitSize * 5, this.unitSize * 3);
+        let imageData = this.screenCtx.getImageData(x, y, this.unitSize * 5, this.unitSize * 3);
         if (directionIndex === 0) {
           if (key === 'left') {
-            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255)) {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255)) {
               contactFlag = true;
             }
           } else if (key === 'right') {
-            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 4 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 4 * this.unitSize * 4) + 3] === 255)) {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255)) {
               contactFlag = true;
             }
           }
         } else if (directionIndex === 2) {
           if (key === 'left') {
-            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255)) {
+            if ((imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255)) {
               contactFlag = true;
             }
           } else if (key === 'right') {
-            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 4 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255)) {
+            if ((imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255)) {
               contactFlag = true;
             }
           }
         } else if (directionIndex === 1) {
           if (key === 'left') {
-            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255)) {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255)) {
               contactFlag = true;
             }
           } else if (key === 'right') {
             if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255)) {
+                (imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255)) {
               contactFlag = true;
             }
           }
         } else if (directionIndex === 3) {
           if (key === 'left') {
-            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255)) {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255)) {
               contactFlag = true;
             }
           } else if (key === 'right') {
-            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255)) {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255)) {
               contactFlag = true;
             }
           }
@@ -1310,56 +1343,56 @@ export default {
         // x x x *        x ? * *       ? ? x *         * x * *
         // ? ? ? *        x * * *       * * ? *         x x * *
         //                ?                             ? ?
-        let imageData = this.screenCtx.getImageData(x - this.unitSize, y, this.unitSize * 5, this.unitSize * 3);
+        let imageData = this.screenCtx.getImageData(x, y, this.unitSize * 5, this.unitSize * 3);
         if (directionIndex === 0) {
           if (key === 'left') {
-            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255)) {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255)) {
               contactFlag = true;
             }
           } else if (key === 'right') {
-            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 4 * this.unitSize * 4) + 3] === 255)) {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255)) {
               contactFlag = true;
             }
           }
         } else if (directionIndex === 2) {
           if (key === 'left') {
-            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255)) {
-              contactFlag = true;
-            }
-          } else if (key === 'right') {
-            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 4 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 4 * this.unitSize * 4) + 3] === 255)) {
-              contactFlag = true;
-            }
-          }
-        } else if (directionIndex === 3) {
-          if (key === 'left') {
-            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255) ||
+            if ((imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
                 (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255)) {
               contactFlag = true;
             }
           } else if (key === 'right') {
-            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255)) {
+            if ((imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255)) {
               contactFlag = true;
             }
           }
         } else if (directionIndex === 1) {
           if (key === 'left') {
-            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255)) {
+            if ((imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 1 * this.unitSize * 4) + 3] === 255)) {
               contactFlag = true;
             }
           } else if (key === 'right') {
-            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255) ||
-                (imageData.data[((2 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255)) {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          }
+        } else if (directionIndex === 3) {
+          if (key === 'left') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255)) {
+              contactFlag = true;
+            }
+          } else if (key === 'right') {
+            if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
+                (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 2 * this.unitSize * 4) + 3] === 255)) {
               contactFlag = true;
             }
           }
@@ -1367,19 +1400,7 @@ export default {
       } else if (name === 'Tian') {
         // x x
         // x x
-        // ? ?
-        let imageData = this.screenCtx.getImageData(x - this.unitSize, y, this.unitSize * 4, this.unitSize * 2);
-        if (key === 'left') {
-          if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255) ||
-              (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 0 * this.unitSize * 4) + 3] === 255)) {
-            contactFlag = true;
-          }
-        } else if (key === 'right') {
-          if ((imageData.data[((0 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255) ||
-              (imageData.data[((1 * this.unitSize * (imageData.width * 4)) + 3 * this.unitSize * 4) + 3] === 255)) {
-            contactFlag = true;
-          }
-        }
+        contactFlag = false
       }
       return contactFlag;
     },
@@ -1399,21 +1420,26 @@ export default {
           }
         } else if (e.key === 'j') {
           // 左旋
-          this.currentBlock.directionIndex--
-          if (this.currentBlock.directionIndex < 0) {
-            this.currentBlock.directionIndex = 3;
+          let nextIndex = this.currentBlock.directionIndex - 1
+          if (nextIndex < 0) {
+            nextIndex = 3;
           }
+          if (!this.rotateCollisionDetection(nextIndex))
+            this.currentBlock.directionIndex = nextIndex
+
         } else if (e.key === 'k') {
           // 右旋
-          this.currentBlock.directionIndex++
-          if (this.currentBlock.directionIndex > 3) {
-            this.currentBlock.directionIndex = 0
+          let nextIndex = this.currentBlock.directionIndex + 1
+          if (nextIndex > 3) {
+            nextIndex = 0;
           }
+          if (!this.rotateCollisionDetection(nextIndex))
+            this.currentBlock.directionIndex = nextIndex
         } else if (e.key === 'r') {
           this.restartGame()
         } else if (e.key === 'i') {
           // 直接落下
-          while (!this.collisionDetection()){
+          while (!this.collisionDetection()) {
             this.currentBlock.y += this.unitSize
           }
           // 完成后直接 出现下一块   保存然后继续
@@ -1428,6 +1454,23 @@ export default {
           if (!this.collisionDetection()) {
             this.currentBlock.y += this.unitSize;
           }
+        } else if (e.key === 'l') {
+          // 与hold的方块交换
+          let holdName = this.holdBlock.name;
+          this.holdBlock.name = this.currentBlock.name;
+          if (holdName === '') {
+            this.randomList()
+          } else {
+            this.currentBlock = {
+              name: holdName,
+              x: this.unitSize * 4,
+              y: 0,
+              directionIndex: 0
+            }
+          }
+          let name = this.holdBlock.name
+          this.holdCtx.clearRect(0, 0, this.width, this.height)
+          this['holdDraw' + name](0, 0);
         }
         this.updateCanvas()
         this.collisionDetection();
@@ -1494,7 +1537,7 @@ export default {
 <style scoped lang="stylus">
 bd = 1px solid #000000
 .home
-  width 600px
+  width 900px
   height 800px
   border bd
   margin: 0 auto
@@ -1505,20 +1548,28 @@ bd = 1px solid #000000
     display flex
     padding-top: 40px;
     position relative
-    .score{
+
+    .score {
       position absolute
       left: 10px
       top: 10px
     }
+
     .screen
-      width 320px
+      width 520px
       height 460px
       border bd
       margin: 0 40px 0 40px
 
+      .hold-block
+        margin-top: 20px
+        margin-left: 20px
+        border bd
+
       .canvas
         float right
         border-left bd
+
     .top-right
       width 150px
       height 460px
