@@ -49,6 +49,7 @@ export default {
       currentBlock: {name: '', x: 0, y: 0, directionIndex: 0},
       nextBlock: {name: '', x: 0, y: 0, directionIndex: 0},
       holdBlock: {name: '', x: 0, y: 0, directionIndex: 0},
+      canHold: true,
       futureBlockArray: [], // 3 块
       speed: 1000,   // 速度
       frameTimeout: null,
@@ -116,6 +117,7 @@ export default {
         directionIndex: 0
       };
       this['draw' + block](this.unitSize * 4, 0);
+      this.canHold = true;
     },
     // T
     drawT(x, y) {
@@ -1456,21 +1458,24 @@ export default {
           }
         } else if (e.key === 'l') {
           // 与hold的方块交换
-          let holdName = this.holdBlock.name;
-          this.holdBlock.name = this.currentBlock.name;
-          if (holdName === '') {
-            this.randomList()
-          } else {
-            this.currentBlock = {
-              name: holdName,
-              x: this.unitSize * 4,
-              y: 0,
-              directionIndex: 0
+          if (this.canHold) {
+            this.canHold = false;
+            let holdName = this.holdBlock.name;
+            this.holdBlock.name = this.currentBlock.name;
+            if (holdName === '') {
+              this.randomList()
+            } else {
+              this.currentBlock = {
+                name: holdName,
+                x: this.unitSize * 4,
+                y: 0,
+                directionIndex: 0
+              }
             }
+            let name = this.holdBlock.name
+            this.holdCtx.clearRect(0, 0, this.width, this.height)
+            this['holdDraw' + name](0, 0);
           }
-          let name = this.holdBlock.name
-          this.holdCtx.clearRect(0, 0, this.width, this.height)
-          this['holdDraw' + name](0, 0);
         }
         this.updateCanvas()
         this.collisionDetection();

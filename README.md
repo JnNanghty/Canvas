@@ -1,24 +1,20 @@
-# canvas
+# Canvas
+vue stylus javascript
 
-## Project setup
+run cmd
 ```
-yarn install
-```
-
-### Compiles and hot-reloads for development
-```
-yarn serve
+    yarn serve
 ```
 
-### Compiles and minifies for production
-```
-yarn build
-```
 
-### Lints and fixes files
-```
-yarn lint
-```
+keymap
 
-### Customize configuration
-See [Configuration Reference](https://cli.vuejs.org/config/).
+>J   spin Left
+> 
+>K   spin Right
+> 
+>L   hold
+> 
+>I   fall to bottom  
+>
+>ASD  ArrowLeft  ArrowRight  ArrowDown 
